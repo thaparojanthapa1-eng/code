@@ -23,7 +23,3 @@ while attempts!=0:
             print(f"{attempts} guess left")
 else:
     print(f"Sorry!\nYou couldn't guess the number in {g} tries")
-
-
-
-
