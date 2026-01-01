@@ -1,6 +1,6 @@
 import sys
 import requests
-from PyQt5.QtWidgets import (QApplication, QWidget, QLabel,
+from PyQt5.QtWidgets import (QApplication, QWidget, QLabel,  
                              QLineEdit, QPushButton, QVBoxLayout)
 
 from PyQt5.QtCore import Qt
@@ -181,3 +181,4 @@ if __name__=="__main__":
     weather_app=WeatherApp()
     weather_app.show()
     sys.exit(app.exec_())
+  
