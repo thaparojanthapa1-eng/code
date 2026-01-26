@@ -15,6 +15,13 @@ DROP_HEIGHT=30
 DROP_VEL=10
 FONT=pygame.font.SysFont("comicsans", 30)
 
+start_time=time.time()
+spent_time=0
+drops_spawn_time=200
+time_since_last_drop=0
+drops=[]
+hit=False
+
 def draw(player, spent_time, drops):
     WINDOW.fill(BG)
     time_text=FONT.render(f"Time: {round(spent_time)}s", 1, "white")
@@ -22,23 +29,24 @@ def draw(player, spent_time, drops):
     pygame.draw.rect(WINDOW, "red", player)
     
     for drop in drops:
-         pygame.draw.rect(WINDOW, "white", drop)
+        pygame.draw.rect(WINDOW, "white", drop)
 
     pygame.display.update()
 
+def restart_game():
+    global start_time, spent_time, drops_spawn_time, time_since_last_drop, hit, drops
+    start_time=time.time()
+    spent_time=0
+    drops_spawn_time=200
+    time_since_last_drop=0
+    drops=[]
+    hit=False
+
 def main():
+    global start_time, spent_time, drops_spawn_time, time_since_last_drop, hit, drops
     run=True
 
     clock=pygame.time.Clock()
-
-    start_time=time.time()
-    spent_time=0
-
-    drops_spawn_time=200
-    time_since_last_drop=0
-
-    drops=[]
-    hit=False
 
     player=pygame.Rect(200, HEIGHT-PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT)
 
@@ -71,19 +79,21 @@ def main():
             drop.y+=DROP_VEL
             if drop.y>HEIGHT:
                 drops.remove(drop)
-            elif drop.y+drop.height>=player.y and drop.colliderect(player):
+            elif drop.colliderect(player):
                 drops.remove(drop)
                 hit=True
                 break
 
         if hit:
-             lost_text=FONT.render("YOU LOST!", 1, "white")
-             WINDOW.blit(lost_text, (WIDTH/2-lost_text.get_width()/2, HEIGHT/2-lost_text.get_height()/2))
-             pygame.display.update()
-             pygame.time.delay(2000)
-             break
-
-        draw(player, spent_time, drops)
+            lost_text=FONT.render("YOU LOST!", 1, "white")
+            restart_text=FONT.render("Press Space Key to Restart", 1, "white")
+            WINDOW.blit(lost_text, (WIDTH/2-lost_text.get_width()/2, HEIGHT/2-lost_text.get_height()/2))
+            WINDOW.blit(restart_text, (WIDTH/2-restart_text.get_width()/2, (HEIGHT/2-restart_text.get_height()/2)+50))
+            pygame.display.update()
+            if keys[pygame.K_SPACE]:
+                restart_game()
+        else:
+            draw(player, spent_time, drops)
 
     pygame.quit()
 
