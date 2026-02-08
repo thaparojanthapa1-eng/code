@@ -1,5 +1,4 @@
 import pygame
-import time
 import random
 import os
 pygame.font.init()
@@ -25,18 +24,63 @@ BLUE_LASER=pygame.image.load(os.path.join("assets", "pixel_laser_blue.png"))
 YELLOW_LASER=pygame.image.load(os.path.join("assets", "pixel_laser_yellow.png"))
 BG=pygame.transform.scale(pygame.image.load(os.path.join("assets", "background-black.png")), (WIDTH, HEIGHT))
 
+class Laser:
+    def __init__(self, x, y, img):
+        self.x=x
+        self.y=y
+        self.img=img
+        self.mask=pygame.mask.from_surface(self.img)
+
+    def draw(self, window):
+        window.blit(self.img, (self.x, self.y))
+
+    def move(self, vel):
+        self.y+=vel
+
+    def off_screen(self, height):
+        return not(self.y<=height and self.y>=0)
+    
+    def collision(self, obj):
+        return collide(self, obj)
+
 class Ship:
+    COOLDOWN=30
+
     def __init__(self, x, y, health=100):
         self.x=x
         self.y=y
         self.health=health
         self.ship_img=None
         self.laser_img=None
-        self.laser=[]
+        self.lasers=[]
         self.cd_counter=0
 
     def draw(self, window):
         window.blit(self.ship_img, (self.x, self.y))
+        for laser in self.lasers:
+            laser.draw(window)
+
+    def move_laser(self, vel, obj):
+        self.cooldown()
+        for laser in self.lasers[:]:
+            laser.move(vel)
+            if laser.off_screen(HEIGHT):
+                self.lasers.remove(laser)
+            elif laser.collision(obj):
+                obj.health-=10
+                self.lasers.remove(laser)
+
+    def cooldown(self):
+        if self.cd_counter>0:
+            self.cd_counter+=1
+        if self.cd_counter>=self.COOLDOWN:
+            self.cd_counter=0
+
+    def shoot(self):
+        if self.cd_counter==0:
+            laser=Laser(self.x, self.y, self.laser_img)
+            self.lasers.append(laser)
+            self.cd_counter=1
 
     def get_width(self):
         return self.ship_img.get_width()
@@ -52,6 +96,18 @@ class Player(Ship):
         self.mask=pygame.mask.from_surface(self.ship_img)
         self.max_health=health
 
+    def move_laser(self, vel, objs):
+        self.cooldown()
+        for laser in self.lasers[:]:
+            laser.move(vel)
+            if laser.off_screen(HEIGHT):
+                self.lasers.remove(laser)
+            else:
+                for obj in objs[:]:
+                    if laser.collision(obj):
+                        objs.remove(obj)
+                        self.lasers.remove(laser)
+
 class Enemy(Ship):
     COLOUR_MAP={
         "red":(RED_SPACE_SHIP, RED_LASER),
@@ -64,7 +120,19 @@ class Enemy(Ship):
         self.mask=pygame.mask.from_surface(self.ship_img)
 
     def move(self, vel):
-         self.y+=vel
+        self.y+=vel
+
+    def shoot(self):
+        if self.cd_counter==0:
+            self.cd_counter=1
+            laser=Laser(self.x-15, self.y, self.laser_img)
+            self.lasers.append(laser)
+        
+def collide(obj1, obj2):
+    offset_x=obj2.x-obj1.x
+    offset_y=obj2.y-obj1.y
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y))!=None
+
 
 def main():
     global lives, level, lost
@@ -75,6 +143,7 @@ def main():
 
     wave_length=5
     enemy_vel=1
+    laser_vel=5
     
     player=Player(300, 500)
 
@@ -92,6 +161,9 @@ def main():
             if event.type==pygame.QUIT:
                 run=False
                 break
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player.shoot()
         
         keys=pygame.key.get_pressed()
         if keys[pygame.K_a] and player.x>0:
@@ -105,11 +177,18 @@ def main():
 
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
+            enemy.move_laser(laser_vel, player)
+
+            if random.randrange(0, 2*FPS)==1:
+                enemy.shoot()
+
             if enemy.y+enemy.get_height()>HEIGHT:
                 lives-=1
                 enemies.remove(enemy)
+            
+            player.move_laser(-laser_vel, enemies)
 
-        if lives==0:
+        if lives==0 or player.health==0:
             lost=True
 
         if not(lost):
@@ -144,7 +223,7 @@ def restart_game():
     enemies=[]
     level=0
     lives=5
-    Player(300, 500)
     lost=False
 
-main()
+if __name__=="__main__":
+    main()
